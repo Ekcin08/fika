@@ -39,7 +39,6 @@
       color: #555;
     }
 
-    /* SNART pulse */
     @keyframes pulse {
       0% { transform: scale(1); opacity: 1; }
       50% { transform: scale(1.08); opacity: 0.7; }
@@ -49,8 +48,6 @@
     .pulse {
       animation: pulse 1s infinite;
     }
-
-    /* ===== RACE ===== */
 
     #raceContainer {
       position: fixed;
@@ -78,7 +75,6 @@
       font-size: 1.2rem;
     }
 
-    /* kopp + steam wrapper */
     #cupWrap {
       position: absolute;
       bottom: 30px;
@@ -92,7 +88,6 @@
       font-size: 2rem;
     }
 
-    /* steam */
     #steam {
       height: 20px;
       position: relative;
@@ -129,7 +124,6 @@
   <div id="result"></div>
   <div id="countdown"></div>
 
-  <!-- RACE -->
   <div id="raceContainer">
     <div id="track"></div>
     <div id="cupWrap">
@@ -158,16 +152,27 @@
 
       const fikaStart = 15 * 60;
       const fikaEnd = fikaStart + 15;
-      const raceStart = 14 * 60 + 45;
+
+      const missedStart = 15 * 60 + 30;
+      const missedEnd = 15 * 60 + 45;
 
       result.classList.remove("pulse");
       steam.style.display = "none";
 
+      /* ===== MISSED FIKA ===== */
+      if (currentTotal >= missedStart && currentTotal < missedEnd) {
+        status.textContent = "För sent";
+        result.textContent = "DU MISSADE FIKAT";
+        countdown.textContent = "";
+        race.style.display = "none";
+      }
+
       /* ===== RACE ===== */
-      if (currentTotal >= raceStart) {
+      else if (currentTotal >= 14 * 60 + 45) {
         race.style.display = "block";
 
-        const duration = 15 * 60; // sekunder
+        const raceStart = 14 * 60 + 45;
+        const duration = 15 * 60;
         const elapsed = (currentTotal - raceStart) * 60;
 
         let progress = elapsed / duration;
@@ -189,14 +194,18 @@
       }
 
       /* ===== FIKA ===== */
-      else if (currentTotal >= fikaStart && currentTotal <= fikaEnd) {
+      else if (
+        currentTotal >= fikaStart &&
+        currentTotal <= fikaEnd &&
+        !(currentTotal >= missedStart && currentTotal < missedEnd)
+      ) {
         status.textContent = "Det är fikatid";
         result.textContent = "JA ☕";
         countdown.textContent = "";
       }
 
       /* ===== NEJ ===== */
-      else {
+      else if (!(currentTotal >= missedStart && currentTotal < missedEnd)) {
         status.textContent = "Ingen fika just nu";
         result.textContent = "NEJ";
 
