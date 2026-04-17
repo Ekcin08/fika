@@ -39,7 +39,7 @@
       color: #555;
     }
 
-    /* Puls för SNART */
+    /* SNART pulse */
     @keyframes pulse {
       0% { transform: scale(1); opacity: 1; }
       50% { transform: scale(1.08); opacity: 0.7; }
@@ -50,7 +50,7 @@
       animation: pulse 1s infinite;
     }
 
-    /* Steam animation */
+    /* steam */
     #steam {
       height: 40px;
       margin-bottom: 10px;
@@ -77,6 +77,52 @@
       50% { opacity: 0.8; }
       100% { transform: translateY(-20px); opacity: 0; }
     }
+
+    /* ===== FIKA RACE ===== */
+
+    #raceContainer {
+      position: fixed;
+      bottom: 20px;
+      left: 5%;
+      width: 90%;
+      height: 60px;
+      display: none;
+    }
+
+    #track {
+      position: absolute;
+      bottom: 20px;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: #ccc;
+      border-radius: 2px;
+    }
+
+    #cup {
+      position: absolute;
+      bottom: 30px;
+      left: 0;
+      font-size: 1.8rem;
+      transform: translateX(0);
+    }
+
+    #finish {
+      position: absolute;
+      right: 0;
+      bottom: 10px;
+      font-size: 1.2rem;
+    }
+
+    /* animation kopp */
+    .move {
+      animation: moveCup 900s linear forwards;
+    }
+
+    @keyframes moveCup {
+      from { left: 0; }
+      to { left: calc(100% - 30px); }
+    }
   </style>
 </head>
 
@@ -90,11 +136,21 @@
 
   <div id="countdown"></div>
 
+  <!-- race längst ner -->
+  <div id="raceContainer">
+    <div id="track"></div>
+    <div id="cup">☕</div>
+    <div id="finish">🏁</div>
+  </div>
+
   <script>
     const status = document.getElementById("status");
     const result = document.getElementById("result");
     const countdown = document.getElementById("countdown");
     const steam = document.getElementById("steam");
+
+    const race = document.getElementById("raceContainer");
+    const cup = document.getElementById("cup");
 
     function checkFika() {
       const now = new Date();
@@ -106,11 +162,26 @@
 
       const fikaStart = 15 * 60;
       const fikaEnd = fikaStart + 15;
+      const raceStart = 14 * 60 + 45;
 
       result.classList.remove("pulse");
       steam.style.display = "none";
 
-      // SNART (14:55–14:59)
+      /* ===== RACE (14:45 -> 15:00) ===== */
+      if (currentTotal >= raceStart && currentTotal <= fikaStart) {
+        race.style.display = "block";
+
+        const progress = (currentTotal - raceStart) / (15); 
+        cup.style.left = (progress * 100) + "%";
+
+        if (currentTotal >= fikaStart) {
+          cup.style.left = "100%";
+        }
+      } else {
+        race.style.display = "none";
+      }
+
+      /* ===== SNART ===== */
       if (currentTotal >= fikaStart - 5 && currentTotal < fikaStart) {
         status.textContent = "Fika börjar snart";
         result.textContent = "SNART ☕";
@@ -119,14 +190,14 @@
         countdown.textContent = "";
       }
 
-      // FIKA (15:00–15:15)
+      /* ===== FIKA ===== */
       else if (currentTotal >= fikaStart && currentTotal <= fikaEnd) {
         status.textContent = "Det är fikatid";
         result.textContent = "JA ☕";
         countdown.textContent = "";
       }
 
-      // NEJ
+      /* ===== NEJ ===== */
       else {
         status.textContent = "Ingen fika just nu";
         result.textContent = "NEJ";
