@@ -50,42 +50,14 @@
       animation: pulse 1s infinite;
     }
 
-    /* steam */
-    #steam {
-      height: 40px;
-      margin-bottom: 10px;
-      display: none;
-      position: relative;
-    }
-
-    #steam::before,
-    #steam::after {
-      content: "☁️";
-      position: absolute;
-      font-size: 1.5rem;
-      animation: steam 1.5s infinite ease-in-out;
-      opacity: 0;
-    }
-
-    #steam::after {
-      left: 20px;
-      animation-delay: 0.7s;
-    }
-
-    @keyframes steam {
-      0% { transform: translateY(10px); opacity: 0; }
-      50% { opacity: 0.8; }
-      100% { transform: translateY(-20px); opacity: 0; }
-    }
-
-    /* ===== FIKA RACE ===== */
+    /* ===== RACE ===== */
 
     #raceContainer {
       position: fixed;
       bottom: 20px;
       left: 5%;
       width: 90%;
-      height: 60px;
+      height: 80px;
       display: none;
     }
 
@@ -94,17 +66,9 @@
       bottom: 20px;
       left: 0;
       width: 100%;
-      height: 4px;
+      height: 6px;
       background: #ccc;
-      border-radius: 2px;
-    }
-
-    #cup {
-      position: absolute;
-      bottom: 30px;
-      left: 0;
-      font-size: 1.8rem;
-      transform: translateX(0);
+      border-radius: 3px;
     }
 
     #finish {
@@ -114,14 +78,46 @@
       font-size: 1.2rem;
     }
 
-    /* animation kopp */
-    .move {
-      animation: moveCup 900s linear forwards;
+    /* kopp + steam wrapper */
+    #cupWrap {
+      position: absolute;
+      bottom: 30px;
+      left: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
-    @keyframes moveCup {
-      from { left: 0; }
-      to { left: calc(100% - 30px); }
+    #cup {
+      font-size: 2rem;
+    }
+
+    /* steam */
+    #steam {
+      height: 20px;
+      position: relative;
+      margin-bottom: 2px;
+      display: none;
+    }
+
+    #steam::before,
+    #steam::after {
+      content: "☁️";
+      position: absolute;
+      font-size: 1rem;
+      animation: steam 1.5s infinite ease-in-out;
+      opacity: 0;
+    }
+
+    #steam::after {
+      left: 10px;
+      animation-delay: 0.7s;
+    }
+
+    @keyframes steam {
+      0% { transform: translateY(5px); opacity: 0; }
+      50% { opacity: 0.8; }
+      100% { transform: translateY(-15px); opacity: 0; }
     }
   </style>
 </head>
@@ -130,16 +126,16 @@
   <h1>Är det fika?</h1>
 
   <div id="status"></div>
-
-  <div id="steam"></div>
   <div id="result"></div>
-
   <div id="countdown"></div>
 
-  <!-- race längst ner -->
+  <!-- RACE -->
   <div id="raceContainer">
     <div id="track"></div>
-    <div id="cup">☕</div>
+    <div id="cupWrap">
+      <div id="steam"></div>
+      <div id="cup">☕</div>
+    </div>
     <div id="finish">🏁</div>
   </div>
 
@@ -147,10 +143,10 @@
     const status = document.getElementById("status");
     const result = document.getElementById("result");
     const countdown = document.getElementById("countdown");
-    const steam = document.getElementById("steam");
 
     const race = document.getElementById("raceContainer");
-    const cup = document.getElementById("cup");
+    const cupWrap = document.getElementById("cupWrap");
+    const steam = document.getElementById("steam");
 
     function checkFika() {
       const now = new Date();
@@ -167,16 +163,18 @@
       result.classList.remove("pulse");
       steam.style.display = "none";
 
-      /* ===== RACE (14:45 -> 15:00) ===== */
-      if (currentTotal >= raceStart && currentTotal <= fikaStart) {
+      /* ===== RACE ===== */
+      if (currentTotal >= raceStart) {
         race.style.display = "block";
 
-        const progress = (currentTotal - raceStart) / (15); 
-        cup.style.left = (progress * 100) + "%";
+        const duration = 15 * 60; // sekunder
+        const elapsed = (currentTotal - raceStart) * 60;
 
-        if (currentTotal >= fikaStart) {
-          cup.style.left = "100%";
-        }
+        let progress = elapsed / duration;
+        if (progress > 1) progress = 1;
+
+        const trackWidth = race.offsetWidth - 40;
+        cupWrap.style.left = (progress * trackWidth) + "px";
       } else {
         race.style.display = "none";
       }
