@@ -3,40 +3,108 @@
 <head>
   <meta charset="UTF-8">
   <title>Är det fika?</title>
+
   <style>
     body {
       display: flex;
+      flex-direction: column;
       height: 100vh;
       justify-content: center;
       align-items: center;
       font-family: Arial, sans-serif;
-      font-size: 5rem;
       background: #f5f5f5;
+      margin: 0;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      font-weight: normal;
+    }
+
+    #result {
+      font-size: 5rem;
+    }
+
+    #countdown {
+      font-size: 1.5rem;
+      margin-top: 1rem;
+      color: #555;
+    }
+
+    /* Pulsanimation för SNART */
+    @keyframes pulse {
+      0%   { transform: scale(1); opacity: 1; }
+      50%  { transform: scale(1.08); opacity: 0.7; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .pulse {
+      animation: pulse 1s infinite;
     }
   </style>
 </head>
+
 <body>
+  <h1>Är det fika?</h1>
   <div id="result"></div>
+  <div id="countdown"></div>
 
   <script>
     const result = document.getElementById("result");
+    const countdown = document.getElementById("countdown");
 
     function checkFika() {
       const now = new Date();
       const hour = now.getHours();
       const minutes = now.getMinutes();
+      const seconds = now.getSeconds();
 
-      if (hour === 15 && minutes >= 0 && minutes <= 15) {
+      const currentTotal = hour * 60 + minutes + seconds / 60;
+
+      const fikaStart = 15 * 60;
+      const fikaEnd = fikaStart + 15;
+
+      // reset animation
+      result.classList.remove("pulse");
+
+      // SNART (14:55–14:59)
+      if (currentTotal >= fikaStart - 5 && currentTotal < fikaStart) {
+        result.textContent = "SNART ☕";
+        result.classList.add("pulse");
+        countdown.textContent = "";
+      }
+
+      // FIKA (15:00–15:15)
+      else if (currentTotal >= fikaStart && currentTotal <= fikaEnd) {
         result.textContent = "JA ☕";
-      } else {
+        countdown.textContent = "";
+      }
+
+      // ANNARS
+      else {
         result.textContent = "NEJ";
+
+        let nextFika = fikaStart;
+
+        // om dagens fika redan varit → nästa dag
+        if (currentTotal > fikaEnd) {
+          nextFika = fikaStart + 24 * 60;
+        }
+
+        const diff = Math.max(0, nextFika - currentTotal);
+
+        const h = Math.floor(diff / 60);
+        const m = Math.floor(diff % 60);
+        const s = Math.floor((diff * 60) % 60);
+
+        countdown.textContent =
+          `Nästa fika om ${h > 0 ? h + "h " : ""}${m}m ${s}s`;
       }
     }
 
-    // Kör direkt
     checkFika();
-
-    // Uppdatera varje sekund
     setInterval(checkFika, 1000);
   </script>
 </body>
