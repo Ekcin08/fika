@@ -199,14 +199,14 @@
         currentTotal <= fikaEnd &&
         !(currentTotal >= missedStart && currentTotal < missedEnd)
       ) {
-        status.textContent = "Det är fikatid";
+        status.textContent = "";
         result.textContent = "JA ☕";
         countdown.textContent = "";
       }
 
       /* ===== NEJ ===== */
       else if (!(currentTotal >= missedStart && currentTotal < missedEnd)) {
-        status.textContent = "Ingen fika just nu";
+        status.textContent = "";
         result.textContent = "NEJ";
 
         let nextFika = fikaStart;
