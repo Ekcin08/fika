@@ -23,6 +23,12 @@
       font-weight: normal;
     }
 
+    #status {
+      font-size: 1.3rem;
+      color: #444;
+      margin-bottom: 1rem;
+    }
+
     #result {
       font-size: 5rem;
     }
@@ -33,7 +39,6 @@
       color: #555;
     }
 
-    /* Pulsanimation för SNART */
     @keyframes pulse {
       0%   { transform: scale(1); opacity: 1; }
       50%  { transform: scale(1.08); opacity: 0.7; }
@@ -48,10 +53,13 @@
 
 <body>
   <h1>Är det fika?</h1>
+
+  <div id="status"></div>
   <div id="result"></div>
   <div id="countdown"></div>
 
   <script>
+    const status = document.getElementById("status");
     const result = document.getElementById("result");
     const countdown = document.getElementById("countdown");
 
@@ -66,29 +74,29 @@
       const fikaStart = 15 * 60;
       const fikaEnd = fikaStart + 15;
 
-      // reset animation
       result.classList.remove("pulse");
 
-      // SNART (14:55–14:59)
+      // SNART
       if (currentTotal >= fikaStart - 5 && currentTotal < fikaStart) {
+        status.textContent = "Fika är snart";
         result.textContent = "SNART ☕";
         result.classList.add("pulse");
         countdown.textContent = "";
       }
 
-      // FIKA (15:00–15:15)
+      // FIKA
       else if (currentTotal >= fikaStart && currentTotal <= fikaEnd) {
+        status.textContent = "Det är fikatid";
         result.textContent = "JA ☕";
         countdown.textContent = "";
       }
 
-      // ANNARS
+      // NEJ
       else {
+        status.textContent = "Ingen fika just nu";
         result.textContent = "NEJ";
 
         let nextFika = fikaStart;
-
-        // om dagens fika redan varit → nästa dag
         if (currentTotal > fikaEnd) {
           nextFika = fikaStart + 24 * 60;
         }
