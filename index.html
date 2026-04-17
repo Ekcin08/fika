@@ -19,14 +19,25 @@
   <div id="result"></div>
 
   <script>
-    const hour = new Date().getHours();
     const result = document.getElementById("result");
 
-    if (hour === 15) {
-      result.textContent = "JA ☕";
-    } else {
-      result.textContent = "NEJ";
+    function checkFika() {
+      const now = new Date();
+      const hour = now.getHours();
+      const minutes = now.getMinutes();
+
+      if (hour === 15 && minutes >= 0 && minutes <= 15) {
+        result.textContent = "JA ☕";
+      } else {
+        result.textContent = "NEJ";
+      }
     }
+
+    // Kör direkt
+    checkFika();
+
+    // Uppdatera varje sekund
+    setInterval(checkFika, 1000);
   </script>
 </body>
 </html>
