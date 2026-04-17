@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <title>Är det fika?</title>
+  <style>
+    body {
+      display: flex;
+      height: 100vh;
+      justify-content: center;
+      align-items: center;
+      font-family: Arial, sans-serif;
+      font-size: 5rem;
+      background: #f5f5f5;
+    }
+  </style>
+</head>
+<body>
+  <div id="result"></div>
+
+  <script>
+    const hour = new Date().getHours();
+    const result = document.getElementById("result");
+
+    if (hour === 15) {
+      result.textContent = "JA ☕";
+    } else {
+      result.textContent = "NEJ";
+    }
+  </script>
+</body>
+</html>
