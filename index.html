@@ -206,7 +206,7 @@
 
       /* ===== SNART ===== */
       if (currentTotal >= fikaStart - 5 && currentTotal < fikaStart) {
-        status.textContent = "Fika börjar snart";
+        status.textContent = "";
         result.textContent = "SNART ☕";
         result.classList.add("pulse");
         steam.style.display = "block";
@@ -215,14 +215,14 @@
 
       /* ===== FIKA ===== */
       else if (currentTotal >= fikaStart && currentTotal <= fikaEnd) {
-        status.textContent = "Det är fikatid";
+        status.textContent = "";
         result.textContent = "JA ☕";
         countdown.textContent = "";
       }
 
       /* ===== NEJ ===== */
       else {
-        status.textContent = "Ingen fika just nu";
+        status.textContent = "";
         result.textContent = "NEJ";
 
         let nextFika = fikaStart;
