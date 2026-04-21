@@ -39,6 +39,15 @@
       color: #555;
     }
 
+    #nameday {
+      position: fixed;
+      top: 10px;
+      left: 15px;
+      font-size: 1rem;
+      color: #333;
+      opacity: 0.8;
+    }
+
     @keyframes pulse {
       0% { transform: scale(1); opacity: 1; }
       50% { transform: scale(1.08); opacity: 0.7; }
@@ -49,7 +58,6 @@
       animation: pulse 1s infinite;
     }
 
-    /* RACE */
     #raceContainer {
       position: fixed;
       bottom: 20px;
@@ -119,6 +127,8 @@
 </head>
 
 <body>
+  <div id="nameday"></div>
+
   <h1>Är det fika?</h1>
 
   <div id="status"></div>
@@ -138,15 +148,30 @@
     const status = document.getElementById("status");
     const result = document.getElementById("result");
     const countdown = document.getElementById("countdown");
+    const namedayEl = document.getElementById("nameday");
 
     const race = document.getElementById("raceContainer");
     const cupWrap = document.getElementById("cupWrap");
     const steam = document.getElementById("steam");
 
+    // ===== NAMNSDAG =====
+    function loadNameday() {
+      fetch("https://api.dryg.net/dagar/v2.1/idag")
+        .then(res => res.json())
+        .then(data => {
+          const names = data.dagar[0].namnsdag;
+          namedayEl.textContent =
+            "Namnsdag: " + (names.length ? names.join(", ") : "—");
+        })
+        .catch(() => {
+          namedayEl.textContent = "Namnsdag: ?";
+        });
+    }
+
     function checkFika() {
       const now = new Date();
 
-      const day = now.getDay(); // 0 = söndag, 6 = lördag
+      const day = now.getDay();
       const hour = now.getHours();
       const minutes = now.getMinutes();
       const seconds = now.getSeconds();
@@ -162,15 +187,11 @@
       result.classList.remove("pulse");
       steam.style.display = "none";
 
-      /* ===== HELG ===== */
+      // HELG
       if (isWeekend || isFridayAfterFika) {
-
-        status.textContent = "";
         result.textContent = "NU ÄR DET HELG 🎉";
-
         race.style.display = "none";
 
-        // nästa måndag 15:00
         let daysUntilMonday = (8 - day) % 7;
         if (daysUntilMonday === 0) daysUntilMonday = 7;
 
@@ -187,8 +208,8 @@
         return;
       }
 
-      /* ===== RACE ===== */
-      if (currentTotal >= 14 * 60 + 45) {
+      // RACE
+      if (currentTotal >= 14 * 60 + 45 && currentTotal <= fikaStart) {
         race.style.display = "block";
 
         const raceStart = 14 * 60 + 45;
@@ -204,25 +225,22 @@
         race.style.display = "none";
       }
 
-      /* ===== SNART ===== */
+      // SNART
       if (currentTotal >= fikaStart - 5 && currentTotal < fikaStart) {
-        status.textContent = "";
         result.textContent = "SNART ☕";
         result.classList.add("pulse");
         steam.style.display = "block";
         countdown.textContent = "";
       }
 
-      /* ===== FIKA ===== */
+      // FIKA
       else if (currentTotal >= fikaStart && currentTotal <= fikaEnd) {
-        status.textContent = "";
         result.textContent = "JA ☕";
         countdown.textContent = "";
       }
 
-      /* ===== NEJ ===== */
+      // NEJ
       else {
-        status.textContent = "";
         result.textContent = "NEJ";
 
         let nextFika = fikaStart;
@@ -241,6 +259,7 @@
       }
     }
 
+    loadNameday();
     checkFika();
     setInterval(checkFika, 1000);
   </script>
