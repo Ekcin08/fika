@@ -23,10 +23,13 @@
       font-weight: normal;
     }
 
-    #status {
-      font-size: 1.3rem;
-      color: #444;
-      margin-bottom: 1rem;
+    #nameday {
+      position: fixed;
+      top: 10px;
+      left: 15px;
+      font-size: 1rem;
+      color: #333;
+      opacity: 0.8;
     }
 
     #result {
@@ -37,15 +40,6 @@
       font-size: 1.5rem;
       margin-top: 1rem;
       color: #555;
-    }
-
-    #nameday {
-      position: fixed;
-      top: 10px;
-      left: 15px;
-      font-size: 1rem;
-      color: #333;
-      opacity: 0.8;
     }
 
     @keyframes pulse {
@@ -70,18 +64,15 @@
     #track {
       position: absolute;
       bottom: 20px;
-      left: 0;
       width: 100%;
       height: 6px;
       background: #ccc;
-      border-radius: 3px;
     }
 
     #finish {
       position: absolute;
       right: 0;
       bottom: 10px;
-      font-size: 1.2rem;
     }
 
     #cupWrap {
@@ -93,14 +84,8 @@
       align-items: center;
     }
 
-    #cup {
-      font-size: 2rem;
-    }
-
     #steam {
       height: 20px;
-      position: relative;
-      margin-bottom: 2px;
       display: none;
     }
 
@@ -109,7 +94,7 @@
       content: "☁️";
       position: absolute;
       font-size: 1rem;
-      animation: steam 1.5s infinite ease-in-out;
+      animation: steam 1.5s infinite;
       opacity: 0;
     }
 
@@ -127,11 +112,9 @@
 </head>
 
 <body>
-  <div id="nameday"></div>
+  <div id="nameday">Laddar namnsdag...</div>
 
   <h1>Är det fika?</h1>
-
-  <div id="status"></div>
   <div id="result"></div>
   <div id="countdown"></div>
 
@@ -139,13 +122,12 @@
     <div id="track"></div>
     <div id="cupWrap">
       <div id="steam"></div>
-      <div id="cup">☕</div>
+      <div>☕</div>
     </div>
     <div id="finish">🏁</div>
   </div>
 
   <script>
-    const status = document.getElementById("status");
     const result = document.getElementById("result");
     const countdown = document.getElementById("countdown");
     const namedayEl = document.getElementById("nameday");
@@ -154,9 +136,15 @@
     const cupWrap = document.getElementById("cupWrap");
     const steam = document.getElementById("steam");
 
-    // ===== NAMNSDAG =====
+    /* ===== NAMNSDAG ===== */
     function loadNameday() {
-      fetch("https://api.dryg.net/dagar/v2.1/idag")
+      const now = new Date();
+
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, "0");
+      const d = String(now.getDate()).padStart(2, "0");
+
+      fetch(`https://api.dryg.net/dagar/v2.1/${y}/${m}/${d}`)
         .then(res => res.json())
         .then(data => {
           const names = data.dagar[0].namnsdag;
@@ -164,98 +152,83 @@
             "Namnsdag: " + (names.length ? names.join(", ") : "—");
         })
         .catch(() => {
-          namedayEl.textContent = "Namnsdag: ?";
+          namedayEl.textContent = "Namnsdag saknas";
         });
     }
 
+    /* ===== FIKA ===== */
     function checkFika() {
       const now = new Date();
 
       const day = now.getDay();
       const hour = now.getHours();
-      const minutes = now.getMinutes();
-      const seconds = now.getSeconds();
+      const min = now.getMinutes();
+      const sec = now.getSeconds();
 
-      const currentTotal = hour * 60 + minutes + seconds / 60;
+      const time = hour * 60 + min + sec / 60;
 
       const fikaStart = 15 * 60;
       const fikaEnd = fikaStart + 15;
 
       const isWeekend = (day === 0 || day === 6);
-      const isFridayAfterFika = (day === 5 && currentTotal > fikaEnd);
+      const isFridayAfterFika = (day === 5 && time > fikaEnd);
 
       result.classList.remove("pulse");
       steam.style.display = "none";
 
-      // HELG
+      /* HELG */
       if (isWeekend || isFridayAfterFika) {
         result.textContent = "NU ÄR DET HELG 🎉";
         race.style.display = "none";
 
-        let daysUntilMonday = (8 - day) % 7;
-        if (daysUntilMonday === 0) daysUntilMonday = 7;
+        let days = (8 - day) % 7;
+        if (days === 0) days = 7;
 
-        const totalMinutes =
-          daysUntilMonday * 24 * 60 +
-          (fikaStart - currentTotal);
-
-        const h = Math.floor(totalMinutes / 60);
-        const m = Math.floor(totalMinutes % 60);
+        const total = days * 1440 + (fikaStart - time);
 
         countdown.textContent =
-          `Nästa fika om ${h}h ${m}m (måndag 15:00)`;
+          `Nästa fika om ${Math.floor(total/60)}h ${Math.floor(total%60)}m`;
 
         return;
       }
 
-      // RACE
-      if (currentTotal >= 14 * 60 + 45 && currentTotal <= fikaStart) {
+      /* RACE */
+      if (time >= 14*60+45 && time <= fikaStart) {
         race.style.display = "block";
 
-        const raceStart = 14 * 60 + 45;
-        const duration = 15 * 60;
-        const elapsed = (currentTotal - raceStart) * 60;
+        const progress = (time - (14*60+45)) / 15;
+        const width = race.offsetWidth - 40;
 
-        let progress = elapsed / duration;
-        if (progress > 1) progress = 1;
-
-        const trackWidth = race.offsetWidth - 40;
-        cupWrap.style.left = (progress * trackWidth) + "px";
+        cupWrap.style.left = (progress * width) + "px";
       } else {
         race.style.display = "none";
       }
 
-      // SNART
-      if (currentTotal >= fikaStart - 5 && currentTotal < fikaStart) {
+      /* SNART */
+      if (time >= fikaStart - 5 && time < fikaStart) {
         result.textContent = "SNART ☕";
         result.classList.add("pulse");
         steam.style.display = "block";
         countdown.textContent = "";
       }
 
-      // FIKA
-      else if (currentTotal >= fikaStart && currentTotal <= fikaEnd) {
+      /* JA */
+      else if (time >= fikaStart && time <= fikaEnd) {
         result.textContent = "JA ☕";
         countdown.textContent = "";
       }
 
-      // NEJ
+      /* NEJ */
       else {
         result.textContent = "NEJ";
 
-        let nextFika = fikaStart;
-        if (currentTotal > fikaEnd) {
-          nextFika = fikaStart + 24 * 60;
-        }
+        let next = fikaStart;
+        if (time > fikaEnd) next += 1440;
 
-        const diff = Math.max(0, nextFika - currentTotal);
-
-        const h = Math.floor(diff / 60);
-        const m = Math.floor(diff % 60);
-        const s = Math.floor((diff * 60) % 60);
+        const diff = next - time;
 
         countdown.textContent =
-          `Nästa fika om ${h > 0 ? h + "h " : ""}${m}m ${s}s`;
+          `Nästa fika om ${Math.floor(diff/60)}m ${Math.floor((diff*60)%60)}s`;
       }
     }
 
