@@ -1,155 +1,248 @@
-<script>
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <title>Är det fika?</title>
 
-const result=document.getElementById("result");
-const countdown=document.getElementById("countdown");
-const namedayEl=document.getElementById("nameday");
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      justify-content: center;
+      align-items: center;
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      text-align: center;
+    }
 
-const race=document.getElementById("raceContainer");
-const cupWrap=document.getElementById("cupWrap");
-const steam=document.getElementById("steam");
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      font-weight: normal;
+    }
 
-/* =========================
-   SVENSK TID (STABIL)
-========================= */
-function getSwedishDate(){
-  return new Date(
-    new Date().toLocaleString("en-US", {
-      timeZone: "Europe/Stockholm"
-    })
-  );
-}
+    #status {
+      font-size: 1.3rem;
+      color: #444;
+      margin-bottom: 1rem;
+    }
 
-/* =========================
-   NAMNSDAG
-========================= */
-function loadNameday(){
-  const now=getSwedishDate();
-  const y=now.getFullYear();
-  const m=String(now.getMonth()+1).padStart(2,"0");
-  const d=String(now.getDate()).padStart(2,"0");
+    #result {
+      font-size: 4rem;
+    }
 
-  fetch(`https://api.dryg.net/dagar/v2.1/${y}/${m}/${d}`)
-    .then(r=>r.json())
-    .then(data=>{
-      const names=data.dagar[0].namnsdag;
-      namedayEl.textContent="Namnsdag: "+names.join(", ");
-    })
-    .catch(()=>{
-      namedayEl.textContent="Namnsdag saknas";
-    });
-}
+    #countdown {
+      font-size: 1.5rem;
+      margin-top: 1rem;
+      color: #555;
+    }
 
-/* =========================
-   FIKA LOGIK
-========================= */
-function checkFika(){
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.08); opacity: 0.7; }
+      100% { transform: scale(1); opacity: 1; }
+    }
 
-const now=getSwedishDate();
+    .pulse {
+      animation: pulse 1s infinite;
+    }
 
-const day=now.getDay();
-const hour=now.getHours();
-const min=now.getMinutes();
+    /* RACE */
+    #raceContainer {
+      position: fixed;
+      bottom: 20px;
+      left: 5%;
+      width: 90%;
+      height: 80px;
+      display: none;
+    }
 
-const isWeekend=(day===0||day===6);
+    #track {
+      position: absolute;
+      bottom: 20px;
+      left: 0;
+      width: 100%;
+      height: 6px;
+      background: #ccc;
+      border-radius: 3px;
+    }
 
-/* ===== SKAPA RIKTIGA TIDPUNKTER ===== */
-const fikaStart=new Date(now);
-fikaStart.setHours(15,0,0,0);
+    #finish {
+      position: absolute;
+      right: 0;
+      bottom: 10px;
+      font-size: 1.2rem;
+    }
 
-const fikaEnd=new Date(now);
-fikaEnd.setHours(15,15,0,0);
+    #cupWrap {
+      position: absolute;
+      bottom: 30px;
+      left: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
 
-const missedStart=new Date(now);
-missedStart.setHours(15,30,0,0);
+    #cup {
+      font-size: 2rem;
+    }
 
-const missedEnd=new Date(now);
-missedEnd.setHours(15,45,0,0);
+    #steam {
+      height: 20px;
+      position: relative;
+      margin-bottom: 2px;
+      display: none;
+    }
 
-const raceStart=new Date(now);
-raceStart.setHours(14,45,0,0);
+    #steam::before,
+    #steam::after {
+      content: "☁️";
+      position: absolute;
+      font-size: 1rem;
+      animation: steam 1.5s infinite ease-in-out;
+      opacity: 0;
+    }
 
-/* helg fredag efter fika */
-const fridayAfter=(day===5 && now>fikaEnd);
+    #steam::after {
+      left: 10px;
+      animation-delay: 0.7s;
+    }
 
-/* reset */
-result.classList.remove("pulse");
-steam.style.display="none";
-race.style.display="none";
+    @keyframes steam {
+      0% { transform: translateY(5px); opacity: 0; }
+      50% { opacity: 0.8; }
+      100% { transform: translateY(-15px); opacity: 0; }
+    }
+  </style>
+</head>
 
-/* =========================
-   HELG
-========================= */
-if(isWeekend || fridayAfter){
-  result.textContent="NU ÄR DET HELG 🎉";
-  countdown.textContent="";
-  return;
-}
+<body>
+  <h1>Är det fika?</h1>
 
-/* =========================
-   MISSADE
-========================= */
-if(now>=missedStart && now<missedEnd){
-  result.textContent="DU MISSADE FIKAT";
-  countdown.textContent="";
-  return;
-}
+  <div id="status"></div>
+  <div id="result"></div>
+  <div id="countdown"></div>
 
-/* =========================
-   RACE
-========================= */
-if(now>=raceStart && now<fikaStart){
-  race.style.display="block";
+  <div id="raceContainer">
+    <div id="track"></div>
+    <div id="cupWrap">
+      <div id="steam"></div>
+      <div id="cup">☕</div>
+    </div>
+    <div id="finish">🏁</div>
+  </div>
 
-  const total=fikaStart-raceStart;
-  const progress=(now-raceStart)/total;
+  <script>
+    const status = document.getElementById("status");
+    const result = document.getElementById("result");
+    const countdown = document.getElementById("countdown");
 
-  const width=race.offsetWidth-40;
-  cupWrap.style.left=(progress*width)+"px";
-}
+    const race = document.getElementById("raceContainer");
+    const cupWrap = document.getElementById("cupWrap");
+    const steam = document.getElementById("steam");
 
-/* =========================
-   SNART
-========================= */
-else if(now>=new Date(fikaStart-5*60000) && now<fikaStart){
-  result.textContent="SNART ☕";
-  result.classList.add("pulse");
-  steam.style.display="block";
-}
+    function checkFika() {
+      const now = new Date();
 
-/* =========================
-   FIKA
-========================= */
-else if(now>=fikaStart && now<=fikaEnd){
-  result.textContent="JA ☕";
-  countdown.textContent="";
-}
+      const day = now.getDay(); // 0 = söndag, 6 = lördag
+      const hour = now.getHours();
+      const minutes = now.getMinutes();
+      const seconds = now.getSeconds();
 
-/* =========================
-   NEJ + RÄKNARE
-========================= */
-else{
+      const currentTotal = hour * 60 + minutes + seconds / 60;
 
-  result.textContent="NEJ";
+      const fikaStart = 15 * 60;
+      const fikaEnd = fikaStart + 15;
 
-  let target=new Date(fikaStart);
+      const isWeekend = (day === 0 || day === 6);
+      const isFridayAfterFika = (day === 5 && currentTotal > fikaEnd);
 
-  if(now>fikaEnd){
-    target.setDate(target.getDate()+1);
-  }
+      result.classList.remove("pulse");
+      steam.style.display = "none";
 
-  const diff=Math.max(0,target-now);
+      /* ===== HELG ===== */
+      if (isWeekend || isFridayAfterFika) {
 
-  const mins=Math.floor(diff/60000);
-  const secs=Math.floor((diff%60000)/1000);
+        status.textContent = "";
+        result.textContent = "NU ÄR DET HELG 🎉";
 
-  countdown.textContent=
-    `Nästa fika om ${mins}m ${secs}s`;
-}
+        race.style.display = "none";
 
-}
+        // nästa måndag 15:00
+        let daysUntilMonday = (8 - day) % 7;
+        if (daysUntilMonday === 0) daysUntilMonday = 7;
 
-loadNameday();
-checkFika();
-setInterval(checkFika,1000);
+        const totalMinutes =
+          daysUntilMonday * 24 * 60 +
+          (fikaStart - currentTotal);
 
-</script>
+        const h = Math.floor(totalMinutes / 60);
+        const m = Math.floor(totalMinutes % 60);
+
+        countdown.textContent =
+          `Nästa fika om ${h}h ${m}m (måndag 15:00)`;
+
+        return;
+      }
+
+      /* ===== RACE ===== */
+      if (currentTotal >= 14 * 60 + 45) {
+        race.style.display = "block";
+
+        const raceStart = 14 * 60 + 45;
+        const duration = 15 * 60;
+        const elapsed = (currentTotal - raceStart) * 60;
+
+        let progress = elapsed / duration;
+        if (progress > 1) progress = 1;
+
+        const trackWidth = race.offsetWidth - 40;
+        cupWrap.style.left = (progress * trackWidth) + "px";
+      } else {
+        race.style.display = "none";
+      }
+
+      /* ===== SNART ===== */
+      if (currentTotal >= fikaStart - 5 && currentTotal < fikaStart) {
+        status.textContent = "";
+        result.textContent = "SNART ☕";
+        result.classList.add("pulse");
+        steam.style.display = "block";
+        countdown.textContent = "";
+      }
+
+      /* ===== FIKA ===== */
+      else if (currentTotal >= fikaStart && currentTotal <= fikaEnd) {
+        status.textContent = "";
+        result.textContent = "JA ☕";
+        countdown.textContent = "";
+      }
+
+      /* ===== NEJ ===== */
+      else {
+        status.textContent = "";
+        result.textContent = "NEJ";
+
+        let nextFika = fikaStart;
+        if (currentTotal > fikaEnd) {
+          nextFika = fikaStart + 24 * 60;
+        }
+
+        const diff = Math.max(0, nextFika - currentTotal);
+
+        const h = Math.floor(diff / 60);
+        const m = Math.floor(diff % 60);
+        const s = Math.floor((diff * 60) % 60);
+
+        countdown.textContent =
+          `Nästa fika om ${h > 0 ? h + "h " : ""}${m}m ${s}s`;
+      }
+    }
+
+    checkFika();
+    setInterval(checkFika, 1000);
+  </script>
+</body>
+</html>
