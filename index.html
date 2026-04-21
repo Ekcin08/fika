@@ -1,281 +1,248 @@
-/* =========================================================
-   FIKA-SCRIPT (Stockholm-tid) + Check-in 15:00–15:15
-   - NEJ + nedräkning
-   - JA 15:00–15:15
-   - Checka in knapp 15:00–15:15
-   - Efter check-in => fika tills 16:00
-   - Skapar UI automatiskt om det saknas i HTML
-========================================================= */
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <title>Är det fika?</title>
 
-document.addEventListener("DOMContentLoaded", () => {
-  // ---------- 1) Hämta/Skapa UI-element ----------
-  const ui = ensureUI();
-
-  // ---------- 2) Tid i Stockholm (med fallback) ----------
-  function getSwedishDate() {
-    // Din originalmetod, men med fallback om den skulle bli "Invalid Date"
-    const d = new Date(
-      new Date().toLocaleString("en-US", { timeZone: "Europe/Stockholm" })
-    );
-    return isNaN(d.getTime()) ? new Date() : d;
-  }
-
-  // ---------- 3) Namnsdag (valfri) ----------
-  async function loadNameday() {
-    const now = getSwedishDate();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, "0");
-    const d = String(now.getDate()).padStart(2, "0");
-
-    try {
-      const r = await fetch(`https://api.dryg.net/dagar/v2.1/${y}/${m}/${d}`);
-      const data = await r.json();
-      const names = data?.dagar?.[0]?.namnsdag ?? [];
-      ui.nameday.textContent = names.length
-        ? `Namnsdag: ${names.join(", ")}`
-        : "Namnsdag saknas";
-    } catch (e) {
-      ui.nameday.textContent = "Namnsdag saknas";
-    }
-  }
-
-  // ---------- 4) Check-in (sparas per dag) ----------
-  function todayKey(now) {
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-  }
-
-  function getCheckedIn(now) {
-    const key = `fika_checkedin_${todayKey(now)}`;
-    return localStorage.getItem(key) === "1";
-  }
-
-  function setCheckedIn(now, value) {
-    const key = `fika_checkedin_${todayKey(now)}`;
-    localStorage.setItem(key, value ? "1" : "0");
-  }
-
-  ui.checkinBtn.addEventListener("click", () => {
-    const now = getSwedishDate();
-    // Bara tillåtet under checkin-fönstret
-    if (isWithinCheckinWindow(now)) {
-      setCheckedIn(now, true);
-      render(); // uppdatera direkt
-    }
-  });
-
-  // ---------- 5) Tidsfönster ----------
-  function atTime(now, h, m, s = 0, ms = 0) {
-    const t = new Date(now);
-    t.setHours(h, m, s, ms);
-    return t;
-  }
-
-  function isWeekend(now) {
-    const day = now.getDay(); // 0=sön, 6=lör
-    return day === 0 || day === 6;
-  }
-
-  function isWithinCheckinWindow(now) {
-    const start = atTime(now, 15, 0, 0, 0);
-    const end   = atTime(now, 15, 15, 0, 0);
-    return now >= start && now < end;
-  }
-
-  // ---------- 6) Render-logik (hjärtat) ----------
-  function render() {
-    const now = getSwedishDate();
-
-    // Grundtider
-    const fikaStart = atTime(now, 15, 0, 0, 0);
-    const fikaEnd   = atTime(now, 15, 15, 0, 0);
-    const checkedIn = getCheckedIn(now);
-
-    // Om checkad in: fika gäller till 16:00
-    const fikaExtendedEnd = atTime(now, 16, 0, 0, 0);
-
-    // Fredags-"helg" logik:
-    // - Om man INTE checkat in: helg efter 15:15
-    // - Om man checkat in: helg efter 16:00 (för att fika pågår längre)
-    const friday = now.getDay() === 5;
-    const fridayWeekendStart = checkedIn ? fikaExtendedEnd : fikaEnd;
-    const fridayAfter = friday && now >= fridayWeekendStart;
-
-    // Reset UI
-    ui.result.classList.remove("pulse");
-    ui.countdown.textContent = "";
-    ui.checkinWrap.style.display = "none";
-    ui.checkinStatus.textContent = "";
-
-    // HELG
-    if (isWeekend(now) || fridayAfter) {
-      ui.result.textContent = "NU ÄR DET HELG 🎉";
-      return;
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      justify-content: center;
+      align-items: center;
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      text-align: center;
     }
 
-    // Om checkad in och klockan är före 16:00 => FIKA
-    if (checkedIn && now < fikaExtendedEnd) {
-      ui.result.textContent = "JA ☕";
-      ui.checkinStatus.textContent = "Du har checkat in till fikat ✅ (fika till 16:00)";
-      return;
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      font-weight: normal;
     }
 
-    // Vanligt fika-fönster 15:00–15:15
-    if (now >= fikaStart && now < fikaEnd) {
-      ui.result.textContent = "JA ☕";
-
-      // Visa checkin-knappen bara om man inte checkat in än
-      if (!checkedIn) {
-        ui.checkinWrap.style.display = "block";
-        ui.checkinStatus.textContent = "Checka in till fikat för att förlänga fika till 16:00 👇";
-      }
-      return;
+    #status {
+      font-size: 1.3rem;
+      color: #444;
+      margin-bottom: 1rem;
     }
 
-    // SNART (14:55–15:00)
-    const soonStart = new Date(fikaStart.getTime() - 5 * 60 * 1000);
-    if (now >= soonStart && now < fikaStart) {
-      ui.result.textContent = "SNART ☕";
-      ui.result.classList.add("pulse");
-      // Countdown till 15:00
-      ui.countdown.textContent = formatCountdown(fikaStart - now);
-      return;
+    #result {
+      font-size: 4rem;
     }
 
-    // Efter 15:15 (och inte checkad in): “missade”-fönster kan du ha kvar om du vill
-    // Här behåller vi din idé men gör den enkel:
-    const missedStart = atTime(now, 15, 30, 0, 0);
-    const missedEnd   = atTime(now, 15, 45, 0, 0);
-    if (now >= missedStart && now < missedEnd) {
-      ui.result.textContent = "DU MISSADE FIKAT";
-      return;
+    #countdown {
+      font-size: 1.5rem;
+      margin-top: 1rem;
+      color: #555;
     }
 
-    // Annars: NEJ + nedräkning till nästa fika (idag 15:00 om före, annars imorgon 15:00)
-    ui.result.textContent = "NEJ";
-
-    let target = new Date(fikaStart);
-    if (now >= fikaEnd) {
-      target.setDate(target.getDate() + 1);
-      target.setHours(15, 0, 0, 0);
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.08); opacity: 0.7; }
+      100% { transform: scale(1); opacity: 1; }
     }
 
-    ui.countdown.textContent = formatCountdown(target - now);
-  }
+    .pulse {
+      animation: pulse 1s infinite;
+    }
 
-  // ---------- 7) Format countdown ----------
-  function formatCountdown(ms) {
-    const diff = Math.max(0, ms);
-    const totalSecs = Math.floor(diff / 1000);
-    const hours = Math.floor(totalSecs / 3600);
-    const mins = Math.floor((totalSecs % 3600) / 60);
-    const secs = totalSecs % 60;
+    /* RACE */
+    #raceContainer {
+      position: fixed;
+      bottom: 20px;
+      left: 5%;
+      width: 90%;
+      height: 80px;
+      display: none;
+    }
 
-    if (hours > 0) return `Nästa fika om ${hours}h ${mins}m ${secs}s`;
-    return `Nästa fika om ${mins}m ${secs}s`;
-  }
+    #track {
+      position: absolute;
+      bottom: 20px;
+      left: 0;
+      width: 100%;
+      height: 6px;
+      background: #ccc;
+      border-radius: 3px;
+    }
 
-  // ---------- 8) Skapa UI om det saknas ----------
-  function ensureUI() {
-    // Försök hitta befintliga element
-    let result = document.getElementById("result");
-    let countdown = document.getElementById("countdown");
-    let nameday = document.getElementById("nameday");
-    let checkinWrap = document.getElementById("checkinWrap");
-    let checkinBtn = document.getElementById("checkinBtn");
-    let checkinStatus = document.getElementById("checkinStatus");
+    #finish {
+      position: absolute;
+      right: 0;
+      bottom: 10px;
+      font-size: 1.2rem;
+    }
 
-    // Om något saknas: skapa en enkel container längst upp i body
-    if (!result || !countdown || !nameday || !checkinWrap || !checkinBtn || !checkinStatus) {
-      let root = document.getElementById("fikaWidget");
+    #cupWrap {
+      position: absolute;
+      bottom: 30px;
+      left: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
 
-      if (!root) {
-        root = document.createElement("div");
-        root.id = "fikaWidget";
-        root.style.maxWidth = "520px";
-        root.style.margin = "20px auto";
-        root.style.padding = "16px";
-        root.style.border = "1px solid rgba(0,0,0,.15)";
-        root.style.borderRadius = "12px";
-        root.style.fontFamily = "system-ui, Segoe UI, Arial";
-        root.style.textAlign = "center";
-        root.style.background = "rgba(255,255,255,.85)";
-        document.body.prepend(root);
+    #cup {
+      font-size: 2rem;
+    }
+
+    #steam {
+      height: 20px;
+      position: relative;
+      margin-bottom: 2px;
+      display: none;
+    }
+
+    #steam::before,
+    #steam::after {
+      content: "☁️";
+      position: absolute;
+      font-size: 1rem;
+      animation: steam 1.5s infinite ease-in-out;
+      opacity: 0;
+    }
+
+    #steam::after {
+      left: 10px;
+      animation-delay: 0.7s;
+    }
+
+    @keyframes steam {
+      0% { transform: translateY(5px); opacity: 0; }
+      50% { opacity: 0.8; }
+      100% { transform: translateY(-15px); opacity: 0; }
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Är det fika?</h1>
+
+  <div id="status"></div>
+  <div id="result"></div>
+  <div id="countdown"></div>
+
+  <div id="raceContainer">
+    <div id="track"></div>
+    <div id="cupWrap">
+      <div id="steam"></div>
+      <div id="cup">☕</div>
+    </div>
+    <div id="finish">🏁</div>
+  </div>
+
+  <script>
+    const status = document.getElementById("status");
+    const result = document.getElementById("result");
+    const countdown = document.getElementById("countdown");
+
+    const race = document.getElementById("raceContainer");
+    const cupWrap = document.getElementById("cupWrap");
+    const steam = document.getElementById("steam");
+
+    function checkFika() {
+      const now = new Date();
+
+      const day = now.getDay(); // 0 = söndag, 6 = lördag
+      const hour = now.getHours();
+      const minutes = now.getMinutes();
+      const seconds = now.getSeconds();
+
+      const currentTotal = hour * 60 + minutes + seconds / 60;
+
+      const fikaStart = 15 * 60;
+      const fikaEnd = fikaStart + 15;
+
+      const isWeekend = (day === 0 || day === 6);
+      const isFridayAfterFika = (day === 5 && currentTotal > fikaEnd);
+
+      result.classList.remove("pulse");
+      steam.style.display = "none";
+
+      /* ===== HELG ===== */
+      if (isWeekend || isFridayAfterFika) {
+
+        status.textContent = "";
+        result.textContent = "NU ÄR DET HELG 🎉";
+
+        race.style.display = "none";
+
+        // nästa måndag 15:00
+        let daysUntilMonday = (8 - day) % 7;
+        if (daysUntilMonday === 0) daysUntilMonday = 7;
+
+        const totalMinutes =
+          daysUntilMonday * 24 * 60 +
+          (fikaStart - currentTotal);
+
+        const h = Math.floor(totalMinutes / 60);
+        const m = Math.floor(totalMinutes % 60);
+
+        countdown.textContent =
+          `Nästa fika om ${h}h ${m}m (måndag 15:00)`;
+
+        return;
       }
 
-      // Skapa element om de saknas
-      if (!result) {
-        result = document.createElement("div");
-        result.id = "result";
-        result.style.fontSize = "48px";
-        result.style.fontWeight = "800";
-        result.style.marginBottom = "10px";
-        root.appendChild(result);
+      /* ===== RACE ===== */
+      if (currentTotal >= 14 * 60 + 45) {
+        race.style.display = "block";
+
+        const raceStart = 14 * 60 + 45;
+        const duration = 15 * 60;
+        const elapsed = (currentTotal - raceStart) * 60;
+
+        let progress = elapsed / duration;
+        if (progress > 1) progress = 1;
+
+        const trackWidth = race.offsetWidth - 40;
+        cupWrap.style.left = (progress * trackWidth) + "px";
+      } else {
+        race.style.display = "none";
       }
 
-      if (!countdown) {
-        countdown = document.createElement("div");
-        countdown.id = "countdown";
-        countdown.style.fontSize = "18px";
-        countdown.style.opacity = "0.85";
-        countdown.style.marginBottom = "12px";
-        root.appendChild(countdown);
+      /* ===== SNART ===== */
+      if (currentTotal >= fikaStart - 5 && currentTotal < fikaStart) {
+        status.textContent = "";
+        result.textContent = "SNART ☕";
+        result.classList.add("pulse");
+        steam.style.display = "block";
+        countdown.textContent = "";
       }
 
-      if (!nameday) {
-        nameday = document.createElement("div");
-        nameday.id = "nameday";
-        nameday.style.fontSize = "14px";
-        nameday.style.opacity = "0.7";
-        nameday.style.marginBottom = "12px";
-        root.appendChild(nameday);
+      /* ===== FIKA ===== */
+      else if (currentTotal >= fikaStart && currentTotal <= fikaEnd) {
+        status.textContent = "";
+        result.textContent = "JA ☕";
+        countdown.textContent = "";
       }
 
-      if (!checkinWrap) {
-        checkinWrap = document.createElement("div");
-        checkinWrap.id = "checkinWrap";
-        checkinWrap.style.marginTop = "10px";
-        root.appendChild(checkinWrap);
-      }
+      /* ===== NEJ ===== */
+      else {
+        status.textContent = "";
+        result.textContent = "NEJ";
 
-      if (!checkinStatus) {
-        checkinStatus = document.createElement("div");
-        checkinStatus.id = "checkinStatus";
-        checkinStatus.style.fontSize = "14px";
-        checkinStatus.style.marginBottom = "8px";
-        checkinStatus.style.opacity = "0.85";
-        checkinWrap.appendChild(checkinStatus);
-      }
+        let nextFika = fikaStart;
+        if (currentTotal > fikaEnd) {
+          nextFika = fikaStart + 24 * 60;
+        }
 
-      if (!checkinBtn) {
-        checkinBtn = document.createElement("button");
-        checkinBtn.id = "checkinBtn";
-        checkinBtn.textContent = "Checka in till fika";
-        checkinBtn.style.padding = "10px 14px";
-        checkinBtn.style.borderRadius = "10px";
-        checkinBtn.style.border = "1px solid rgba(0,0,0,.2)";
-        checkinBtn.style.cursor = "pointer";
-        checkinBtn.style.fontWeight = "700";
-        checkinWrap.appendChild(checkinBtn);
-      }
+        const diff = Math.max(0, nextFika - currentTotal);
 
-      // Lite enkel “pulse”-klass utan CSS-fil
-      const styleId = "fikaWidgetStyle";
-      if (!document.getElementById(styleId)) {
-        const st = document.createElement("style");
-        st.id = styleId;
-        st.textContent = `
-          .pulse { animation: pulse 1s infinite; }
-          @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
-        `;
-        document.head.appendChild(st);
+        const h = Math.floor(diff / 60);
+        const m = Math.floor(diff % 60);
+        const s = Math.floor((diff * 60) % 60);
+
+        countdown.textContent =
+          `Nästa fika om ${h > 0 ? h + "h " : ""}${m}m ${s}s`;
       }
     }
 
-    return { result, countdown, nameday, checkinWrap, checkinBtn, checkinStatus };
-  }
-
-  // ---------- Start ----------
-  loadNameday();
-  render();
-  setInterval(render, 1000);
-});
+    checkFika();
+    setInterval(checkFika, 1000);
+  </script>
+</body>
+</html>
