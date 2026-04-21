@@ -142,7 +142,8 @@ namedayEl.textContent="Namnsdag: "+names.join(", ");
 function checkFika(){
 
 const {hour,min,sec,day}=getSwedishTime();
-const time=hour*60+min+sec/60;
+const time = hour * 60 + min;
+const seconds = sec;
 
 const fikaStart=15*60;
 const fikaEnd=fikaStart+15;
