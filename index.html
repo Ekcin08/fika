@@ -11,7 +11,7 @@ body {
   height:100vh;
   justify-content:center;
   align-items:center;
-  font-family:Arial,sans-serif;
+  font-family:Arial;
   background:#f5f5f5;
   margin:0;
   text-align:center;
@@ -21,55 +21,72 @@ body {
   position:fixed;
   top:10px;
   left:15px;
-  font-size:1rem;
   opacity:0.8;
+  font-size:1rem;
 }
 
 #result{font-size:4rem;}
 #countdown{font-size:1.5rem;margin-top:10px;color:#555;}
 
-@keyframes pulse{
-0%{transform:scale(1);}
-50%{transform:scale(1.08);}
-100%{transform:scale(1);}
+@keyframes pulse {
+  0%{transform:scale(1);}
+  50%{transform:scale(1.08);}
+  100%{transform:scale(1);}
 }
 .pulse{animation:pulse 1s infinite;}
 
-/* RACE */
 #raceContainer{
-position:fixed;
-bottom:20px;
-left:5%;
-width:90%;
-height:80px;
-display:none;
+  position:fixed;
+  bottom:20px;
+  left:5%;
+  width:90%;
+  height:80px;
+  display:none;
 }
-#track{position:absolute;bottom:20px;width:100%;height:6px;background:#ccc;}
-#finish{position:absolute;right:0;bottom:10px;}
+#track{
+  position:absolute;
+  bottom:20px;
+  width:100%;
+  height:6px;
+  background:#ccc;
+}
+#finish{
+  position:absolute;
+  right:0;
+  bottom:10px;
+}
 
 #cupWrap{
-position:absolute;
-bottom:30px;
-left:0;
-display:flex;
-flex-direction:column;
-align-items:center;
+  position:absolute;
+  bottom:30px;
+  left:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
 }
 
-#steam{height:20px;display:none;position:relative;}
-#steam::before,#steam::after{
-content:"☁️";
-position:absolute;
-font-size:1rem;
-animation:steam 1.5s infinite;
-opacity:0;
+#steam{
+  display:none;
+  height:20px;
+  position:relative;
 }
-#steam::after{left:10px;animation-delay:.7s;}
+
+#steam::before,#steam::after{
+  content:"☁️";
+  position:absolute;
+  animation:steam 1.5s infinite;
+  opacity:0;
+}
+
+#steam::after{
+  left:10px;
+  animation-delay:.7s;
+}
 
 @keyframes steam{
-0%{transform:translateY(5px);opacity:0;}
-50%{opacity:.8;}
-100%{transform:translateY(-15px);opacity:0;}
+  0%{transform:translateY(5px);opacity:0;}
+  50%{opacity:.8;}
+  100%{transform:translateY(-15px);opacity:0;}
 }
 </style>
 </head>
@@ -96,11 +113,12 @@ opacity:0;
 const result=document.getElementById("result");
 const countdown=document.getElementById("countdown");
 const namedayEl=document.getElementById("nameday");
+
 const race=document.getElementById("raceContainer");
 const cupWrap=document.getElementById("cupWrap");
 const steam=document.getElementById("steam");
 
-/* ===== SVENSK TID (FIX 1h BUGG) ===== */
+/* ===== SVENSK TID ===== */
 function getSwedishTime(){
 const now=new Date();
 
@@ -138,12 +156,11 @@ namedayEl.textContent="Namnsdag: "+names.join(", ");
 .catch(()=>namedayEl.textContent="Namnsdag saknas");
 }
 
-/* ===== FIKA ===== */
+/* ===== FIKA LOGIK ===== */
 function checkFika(){
 
 const {hour,min,sec,day}=getSwedishTime();
-const time = hour * 60 + min;
-const seconds = sec;
+const time=hour*60+min;
 
 const fikaStart=15*60;
 const fikaEnd=fikaStart+15;
@@ -154,60 +171,52 @@ const missedEnd=15*60+45;
 const isWeekend=(day===0||day===6);
 const isFridayAfterFika=(day===5 && time>fikaEnd);
 
+/* RESET */
 result.classList.remove("pulse");
 steam.style.display="none";
 
-/* HELG */
+/* ===== HELG ===== */
 if(isWeekend||isFridayAfterFika){
 result.textContent="NU ÄR DET HELG 🎉";
 race.style.display="none";
-
-let days=(8-day)%7;
-if(days===0)days=7;
-
-const total=days*1440+(fikaStart-time);
-
-countdown.textContent=
-`Nästa fika om ${Math.floor(total/60)}h ${Math.floor(total%60)}m`;
+countdown.textContent="";
 return;
 }
 
-/* MISSADE */
-if(time>=missedStart && time<missedEnd){
+/* ===== MISSADE ===== */
+else if(time>=missedStart && time<missedEnd){
 result.textContent="DU MISSADE FIKAT";
 race.style.display="none";
 countdown.textContent="";
 return;
 }
 
-/* RACE */
-if(time>=14*60+45 && time<=fikaStart){
+/* ===== RACE ===== */
+else if(time>=14*60+45 && time<=fikaStart){
 race.style.display="block";
 
 const progress=(time-(14*60+45))/15;
 const width=race.offsetWidth-40;
 
 cupWrap.style.left=(progress*width)+"px";
-}else{
-race.style.display="none";
 }
 
-/* SNART */
-if(time>=fikaStart-5 && time<fikaStart){
+/* ===== SNART ===== */
+else if(time>=fikaStart-5 && time<fikaStart){
 result.textContent="SNART ☕";
 result.classList.add("pulse");
 steam.style.display="block";
-return;
+countdown.textContent="";
 }
 
-/* JA */
-if(time>=fikaStart && time<=fikaEnd){
+/* ===== FIKA ===== */
+else if(time>=fikaStart && time<=fikaEnd){
 result.textContent="JA ☕";
 countdown.textContent="";
-return;
 }
 
-/* NEJ */
+/* ===== NEJ ===== */
+else {
 result.textContent="NEJ";
 
 let next=fikaStart;
@@ -217,6 +226,7 @@ const diff=next-time;
 
 countdown.textContent=
 `Nästa fika om ${Math.floor(diff/60)}m ${Math.floor((diff*60)%60)}s`;
+}
 
 }
 
